@@ -9,6 +9,10 @@ import ultralytics
 import torch
 from yolo_helper import make_callback_adapter_with_counter, convert_tracking_results_to_pandas
 
+#import av
+#import subprocess
+import moviepy.editor as moviepy
+
 class VideoHandler():
 
     def __init__(self, video: bytes):
@@ -68,9 +72,43 @@ class VideoHandler():
         #processed_video_path = os.path.join(tmpdir, "runs/detect/track", self.temp_id + ".avi")
         processed_video_path = os.path.join(outputdir, "track", self.temp_id + ".avi")
         converted_video_path = os.path.join(outputdir, "track", self.temp_id + ".mp4")
-        # TODO - huge security hole! replace with encoding via PyAV library
+        # "TODO" - huge security hole! replace with encoding via PyAV library
         print(f"Converting the output ({processed_video_path}) to the format readable by streamlit")
-        os.system(f"ffmpeg -y -i {processed_video_path} -vcodec libx264 {converted_video_path}")
+        # os.system(f"ffmpeg -y -i {processed_video_path} -vcodec libx264 {converted_video_path}")
+        # os.system("ffmpeg -y -i {processed_video_path} -vcodec libx264 {converted_video_path}")
+        clip = moviepy.VideoFileClip(processed_video_path)
+        clip.write_videofile(converted_video_path)
+        """ ffmpeg_command = [
+            'ffmpeg', '-y', '-i', processed_video_path, '-vcodec', 'libx264', converted_video_path
+            ]
+
+        # Run the command and capture output and errors
+        result = subprocess.run(ffmpeg_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        # Check if the command was successful
+        if result.returncode == 0:
+           print("Conversion successful!")
+        else:
+            print(f"Error during conversion: {result.stderr.decode('utf-8')}")
+         """
+        
+        """ # Using PyAV instead of os.system for video conversion
+        print(f"Converting the output ({processed_video_path}) to the format readable by streamlit using PyAV")
+
+        with av.open(processed_video_path) as input_container:
+            with av.open(converted_video_path, mode='w') as output_container:
+                # Create a video stream in the output container (H.264 codec)
+                output_stream = output_container.add_stream('libx264')
+
+                for frame in input_container.decode(video=0):  # Decode the input video
+                    # Encode the video frames into the output stream
+                    for packet in output_stream.encode(frame):
+                        output_container.mux(packet)
+
+                # Flush the stream at the end of the video to finalize encoding
+                for packet in output_stream.encode(None):
+                    output_container.mux(packet) """
+
         print(f"Conversion complete")
         return results_df, converted_video_path
     
